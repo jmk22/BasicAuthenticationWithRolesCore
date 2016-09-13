@@ -53,5 +53,13 @@ namespace BasicAuthentication.Controllers
                 return View();
             }
         }
+
+        public IActionResult Delete(string rolename)
+        {
+            var thisRole = _db.Roles.Where(r => r.Name.Equals(rolename, StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
+            _db.Roles.Remove(thisRole);
+            _db.SaveChanges();
+            return RedirectToAction("Index");
+        }
     }
 }
