@@ -7,6 +7,7 @@ using BasicAuthentication.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace BasicAuthentication.Controllers
 {
@@ -28,6 +29,14 @@ namespace BasicAuthentication.Controllers
         {
             var roles = _db.Roles.ToList();
             return View(roles);
+        }
+
+        private void PrepopulateDropDownMenus()
+        {
+            var rolesList = _db.Roles.OrderBy(r => r.Name).ToList().Select(rr => new SelectListItem { Value = rr.Name.ToString(), Text = rr.Name }).ToList();
+            var usersList = _db.Users.OrderBy(u => u.UserName).ToList().Select(uu => new SelectListItem { Value = uu.UserName.ToString(), Text = uu.UserName }).ToList();
+            ViewBag.Roles = rolesList;
+            ViewBag.Users = usersList;
         }
 
         public IActionResult Create()
@@ -85,6 +94,44 @@ namespace BasicAuthentication.Controllers
                 Console.WriteLine(ex);
                 return View();
             }
+        }
+
+        public IActionResult Manage()
+        {
+            PrepopulateDropDownMenus();
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddRoleToUser(string UserName, string RoleName)
+        {
+            try
+            {
+                var RoleNameUpper = RoleName.ToUpper();
+
+                ApplicationUser user = _db.Users.Where(u => u.UserName.Equals(UserName, StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
+                await _userManager.AddToRoleAsync(user, RoleNameUpper);
+                PrepopulateDropDownMenus();
+                ViewBag.ResultMessage = "Role created successfully!";
+                return View("Manage", "Roles");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                return View("Manage");
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GetRoles(string userName)
+        {
+            ApplicationUser user = _db.Users.Where(u => u.UserName.Equals(userName, StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
+            var account = new AccountController(_userManager, _signInManager, _db);
+            ViewBag.RolesForThisUser = await account._userManager.GetRolesAsync(user);
+            PrepopulateDropDownMenus();
+            return View("Manage");
         }
     }
 }
