@@ -6,12 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 using BasicAuthentication.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace BasicAuthentication.Controllers
 {
     public class RolesController : Controller
     {
-        private readonly ApplicationDbContext _db;
+        private ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
@@ -60,6 +61,30 @@ namespace BasicAuthentication.Controllers
             _db.Roles.Remove(thisRole);
             _db.SaveChanges();
             return RedirectToAction("Index");
+        }
+
+        public IActionResult Edit(string rolename)
+        {
+            var thisRole = _db.Roles.Where(r => r.Name.Equals(rolename, StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
+            return View(thisRole);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(IdentityRole role)
+        {
+            try
+            {
+                _db.Roles.Attach(role);
+                _db.Entry(role).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                await _db.SaveChangesAsync();
+                return RedirectToAction("Index");
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                Console.WriteLine(ex);
+                return View();
+            }
         }
     }
 }
